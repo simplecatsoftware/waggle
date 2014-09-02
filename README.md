@@ -7,17 +7,25 @@ A realtime intra application communication network.
 
 Installation requires that you have node installed and are running at least version 0.10.31, redis is also required
 
-```brew install nvm redis```
-
-```nvm install 0.10.31```
-
-```sudo npm install -g nodemon```
+```bash
+brew install nvm redis
+```
+```bash
+nvm install 0.10.31
+```
+```bash
+sudo npm install -g nodemon
+```
 
 ### Setup
 
-```git clone ssh://git@g.it.symphony.local:2222/sym/waggle.git```
+```bash
+git clone ssh://git@g.it.symphony.local:2222/sym/waggle.git
+```
 
-```npm install```
+```bash
+npm install
+```
 
 ## Developing
 
