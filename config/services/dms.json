@@ -1,0 +1,25 @@
+{
+    "name": "dms",
+    "resources": [
+        {
+            "namespace": "/document/view",
+            "required": [ "fullname", "username", "extension" ],
+            "unique": "username",
+            "add_keys": [ "@timestamp" ]
+        }
+    ],
+    "environments": {
+        "production": {
+            "url": "/https://docs.symphony-group.co.uk/g",
+            "sessionKey": "SymAuthSess01"
+        },
+        "staging": {
+            "url": "/http://dms-staging.symphony-group.co.uk/g",
+            "sessionKey": "SymAuthStagingSess01"
+        },
+        "development": {
+            "url": "/[a-z]+.dms.dev.symphony-group.co.uk/g",
+            "sessionKey": "SymAuthDevSess01"
+        }
+    }
+}
