@@ -1,19 +1,45 @@
 # Waggle
 A realtime intra application communication network.
 
+## Developing
+
+Working with waggle is relatively easy, there is a vagrant set up in the root of the project directory so you just need to run the following and you are sorted.
+
+** This will take approximately 5-10 minutes to complete **
+```bash
+vagrant up; vagrant ssh; clear; vagrant ssh;
+```
+
+
 ## Installation
 
 ### Production Prerequisites
 
 Running the application in a production environment requires the following managing applications
 
+* node >0.11.13
+* git
+* redis-server
 * [nodenv](https://github.com/OiNutter/nodenv)
 * [pm2](https://github.com/Unitech/PM2)
 
-#### Setup nodenv
+#### Initial preparation
+
+Git is required to get the packages and build-essential for compiling node
+
+```bash
+sudo apt-get update
+sudo apt-get install git build-essential
+```
+
+#### Install nodenv
+
+Bear in mind that when you run the install command from nodenv it will compile node from source, it is recommended that you have at least 2GB of ram and 2 CPUs assigned to the server you are building on.
+
 ```bash
 # Logged in as the user for the service
 git clone https://github.com/OiNutter/nodenv.git ~/.nodenv
+git clone https://github.com/OiNutter/node-build.git ~/.nodenv/plugins/node-build
 
 echo 'export PATH="$HOME/.nodenv/bin:$PATH"' >> ~/.bashrc
 echo 'eval "$(nodenv init -)"' >> ~/.bashrc
@@ -21,34 +47,23 @@ echo 'eval "$(nodenv init -)"' >> ~/.bashrc
 . ~/.bashrc
 
 type nodenv # This should return #=> "nodenv is a function"
+
+nodenv install 0.11.13
+nodenv rehash
 ```
 
-#### Setup pm2
+#### Install pm2
 ```bash
 nodenv exec npm install -g pm2 # This may need to be run as root (sudo)
 ```
-
-Installation requires that you have node installed and are running at least version 0.10.31, redis is also required
-
+pm2 start main.js --name=waggle --node-args="--harmony"
+#### Install redis
 ```bash
-brew install nvm redis
-```
-```bash
-nvm install 0.10.31
-```
-```bash
-sudo npm install -g nodemon
+sudo apt-get install redis-server
 ```
 
-### Setup
+Ensure redis is running with ```sudo service redis-server status``` and if not then run ```sudo service redis-server start```
 
-```bash
-git clone ssh://git@g.it.symphony.local:2222/sym/waggle.git
-```
-
-```bash
-npm install
-```
 
 ### Configuration
 
@@ -83,14 +98,3 @@ Services are added to the application using json files in the ```config/services
  * **Add_Keys** {array}
     An array of keys to add to the client data object
    * if prepended with a @ the value of the field will be the return value of the method named after the key
-
-## Developing
-
-Working with waggle is relatively easy, you just need to make sure you have the installation prerequisites installed and the following running:
-
-* redis-server ```redis-server --loglevel=verbose```
-* nodemon (from the root directory) ```nodemon```
-
-It is also a good idea to have the following running in a terminal as it will give useful information for errors and troubleshooting.
-
-* redis monitor ```redis-cli monitor```
