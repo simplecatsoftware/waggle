@@ -9,9 +9,10 @@ var io_redis = require('socket.io-redis');
 var redis = require('redis').createClient();
 var _ = require('underscore');
 
+
 // redis.flushdb();
 
-io.adapter(io_redis({ host: config.redis_host, port: config.redis_port, key: config.redis_key }));
+// io.adapter(io_redis({ host: config.redis_host, port: config.redis_port, key: config.redis_key }));
 
 config.services.forEach( function ( service ) {
     service.resources.forEach( function ( resource ) {

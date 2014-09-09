@@ -57,6 +57,10 @@ viewers, me {
             $("#" + id).remove();
         });
 
+        socket.on('err', function (err) {
+            $("viewers").html(err);
+        });
+
         socket.emit("subscribe", resource, info);
     });
 </script>

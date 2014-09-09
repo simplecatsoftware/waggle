@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: co_test.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: co_test.js</h1>
+
+    
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>var config = require('./config');
+var co = require('co');
+var thunkify = require('thunkify');
+var redisClient = require('redis').createClient();
+var redisCo = require('co-redis');
+var redis = redisCo(redisClient);
+var http = require('http').createServer( function ( req, res ) {
+    fs.readFile( './public/index.html', 'utf8', function ( err, data ) {
+        res.end(data);
+    });
+}).listen( config.http_port );
+var io = require('socket.io')(http);
+var io_redis = require('socket.io-redis');
+var eventEmitter = require('eventemitter2').EventEmitter;
+var fs = require('fs');
+var _ = require('underscore');
+
+
+io.adapter(io_redis({ host: config.redis_host, port: config.redis_port, key: config.redis_key }));
+
+var Waggle = function () {
+    config.services.forEach( function ( service ) {
+        service.resources.forEach( function ( resource ) {
+            io.of( "/" + service.name + resource.namespace )
+              .on( "connection", this.onSocketConnect.bind( this ) )
+              .configuration = resource;
+        }, this);
+    }, this);
+};
+
+/**
+ * Event handler for any errors
+ * @event
+ * @param {string|error} err - The error that triggered the event
+ */
+Waggle.prototype.onError = function ( err ) {
+
+};
+
+/**
+ * Event handler for Socket.io connection
+ * @event
+ * @param {object} socket - The Socket.io instance
+ */
+Waggle.prototype.onSocketConnect = co( function *( socket ) {
+    console.log('connect', socket.id);
+
+    socket.on('disconnect', this.onSocketDisconnect.bind( this, socket ) );
+    socket.on('subscribe', this.onSocketSubscribe.bind( this, socket ) );
+});
+
+/**
+ * Event handler for Socket.io disconnection
+ * @event
+ * @param {object} socket - The Socket.io instance
+ */
+Waggle.prototype.onSocketDisconnect = co( function *( socket ) {
+    console.log('disconnect', socket.id);
+});
+
+/**
+ * Event handler for Socket.io channel subscribe
+ * @event
+ * @param {object} socket - The Socket.io instance
+ */
+Waggle.prototype.onSocketSubscribe = co( function *( socket, room, info ) {
+    console.log("subscribe", room, info);
+
+    var service_config  = socket.nsp.configuration;
+    var namespace       = socket.nsp.name;
+
+    // Check that the required information is provided
+    if ( !this.arrayContains( service_config.required, _.keys( info ) ) ) {
+        socket.emit("err", "Failed to connect: required fields not supplied");
+        return;
+    };
+
+    // Create the clients resource info if needed
+    var client_resource = socket.nsp.name + ":" + room + "#" + info[service_config.unique];
+    var stored_info = yield redis.hgetall( "info:" + client_resource );
+
+    if ( !stored_info ) stored_info = _.extend( info, { timestamp: socket.handshake.issued } );
+
+    // Set the client information hash
+    yield redis.hmset( "info:" + client_resource, stored_info );
+
+    // Create an entry for the socket id referenced to the client
+    yield redis.set( "socket:" + socket.id, client_resource );
+
+    // Create an entry for the client with it's asociated sockets
+    yield redis.sadd( "resource:" + client_resource, socket.id );
+
+    // Join the room
+    socket.join( room );
+
+    var uniques_in_room = yield redis.keys( "resource:" + socket.nsp.name + ":" + room + "*" );
+
+    /**
+     * @todo Sends multiple join events to each socket
+     */
+    _.each( uniques_in_room, co( function *( unique ) {
+        if ( unique.indexOf( info[service_config.unique] ) !== -1 ) return;
+
+        var sockets = yield redis.smembers( unique );
+
+        _.each( sockets, function ( sid ) {
+            // If the socket doesn't exist then delete it
+            if ( !socket.nsp.connected[ sid ] ) {
+                // Do not yield as we don't care if these operations have any problems
+                redisClient.srem( unique, sid );
+                redisClient.del( "socket:" + sid );
+                return;
+            }
+
+            // Broadcast to the sockets
+            socket.nsp.connected[ sid ].emit( "join", stored_info );
+
+        });
+    }));
+});
+
+/**
+ * Check if the values in arr_2 exist in arr_1
+ * @param {array} arr_1 - The source array
+ * @param {array} arr_2 - The array you are testing
+ * @return {bool}
+ */
+Waggle.prototype.arrayContains = function ( arr_1 , arr_2 ) {
+    var isSame = true;
+
+    _.each( arr_1, function (val) {
+        if ( arr_2.indexOf(val) === -1 ) {
+            isSame = false;
+        }
+    });
+
+    return isSame;
+}
+
+new Waggle();
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Index</a></h2><h3>Events</h3><ul><li><a href="Waggle.html#event:onError">onError</a></li><li><a href="Waggle.html#event:onSocketConnect">onSocketConnect</a></li><li><a href="Waggle.html#event:onSocketDisconnect">onSocketDisconnect</a></li><li><a href="Waggle.html#event:onSocketSubscribe">onSocketSubscribe</a></li></ul>
+</nav>
+
+<br clear="both">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha9</a> on Tue Sep 09 2014 08:38:56 GMT+0100 (BST)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
