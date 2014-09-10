@@ -1,66 +1,122 @@
 <style>
-.connected {
-    background-color: green;
-}
-.not_connected {
-    background-color: red;
-}
-viewers, me {
-    font-size: 24px;
-    font-weight: bold;
-}
+    .connected {
+        background-color: green;
+    }
+    .not_connected {
+        background-color: red;
+    }
+    viewers,
+    me {
+        font-size: 24px;
+        font-weight: bold;
+    }
 </style>
 <me></me>
-<h4>Viewers</h4>
-<viewers></viewers>
+
+<documentview>
+    <h2>Viewers of </h2>
+    <viewers></viewers>
+</documentview>
+
+<hr>
+
+<systemview>
+    <h2>Active on system</h2>
+    <viewers></viewers>
+</systemview>
 
 <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Faker/0.7.2/MinFaker.js"></script>
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
-    var namespace   = "/dms/document/view";
-    var socket      = io(namespace);
+    (function() {
+        var namespace = "/dms/document/view";
+        var socket = io(namespace);
+        var info = {};
 
-    // var info        = { username: "lgold", fullname: "L. Goldstien", extension: "6616" };
-    // var info        = { username: "posbo", fullname: "P. Osbourne", extension: "6611" };
-    var info = {};
+        decodeURIComponent(location.search.substr(1)).split("&").forEach(function(val) {
+            var bit = val.split("=");
+            info[bit[0]] = bit[1];
+        })
 
-    decodeURIComponent(location.search.substr(1)).split("&").forEach(function (val) {
-        var bit = val.split("=");
-        info[bit[0]] = bit[1];
-    })
+        var resource = location.toString().split("/");
+        resource = resource[resource.length - 1].split("?")[0];
 
-    var resource    = location.toString().split("/");
-        resource    = resource[ resource.length - 1 ].split("?")[0];
+        $('documentview h2').html( "Viewers of " + resource );
 
-    $("me").html("You are " + info.fullname);
+        $("me").html("You are " + info.fullname);
 
-    socket.on('connect', function(){
-        $('viewers').children().remove();
+        socket.on('connect', function() {
 
-        $('body').removeClass().addClass("connected");
+            socket.on('defaults', function () {
+                console.log(arguments);
+            } );
+            $('documentview viewers').children().remove();
 
-        socket.on('disconnect', function () {
-            $('body').removeClass().addClass("not_connected");
+            $('body').removeClass().addClass("connected");
+
+            socket.on('disconnect', function() {
+                $('body').removeClass().addClass("not_connected");
+            });
+
+            socket.on('join', function(info) {
+                console.log("join", namespace, arguments);
+                if ($("#" + info.username).length === 0) {
+                    $('documentview viewers').append($("<div id='" + info.username + "'>" + info.fullname + "</div>"));
+                }
+            });
+
+            socket.on('leave', function(id) {
+                console.log("leave", namespace, arguments);
+                $("documentview #" + id).remove();
+            });
+
+            socket.on('err', function(err) {
+                $("documentview viewers").html(err);
+            });
+
+            socket.emit("subscribe", resource, info);
         });
+    }());
 
-        socket.on('join', function (info) {
-            console.log("join", arguments);
-            if ($("#" + info.username).length === 0) {
-                $('viewers').append($("<div id='" + info.username + "'>" + info.fullname + "</div>"));
-            }
+    (function() {
+        var namespace = "/dms";
+        var socket = io(namespace);
+
+        var info = {};
+
+        decodeURIComponent(location.search.substr(1)).split("&").forEach(function(val) {
+            var bit = val.split("=");
+            info[bit[0]] = bit[1];
+        })
+
+        socket.on('connect', function() {
+            $('systemview viewers').children().remove();
+
+            $('body').removeClass().addClass("connected");
+
+            socket.on('disconnect', function() {
+                $('body').removeClass().addClass("not_connected");
+            });
+
+            socket.on('join', function(info) {
+                console.log("join", namespace, arguments);
+                if ($("#" + info.username).length === 0) {
+                    $('systemview viewers').append($("<div id='" + info.username + "'>" + info.fullname + "</div>"));
+                }
+            });
+
+            socket.on('leave', function(id) {
+                console.log("leave", namespace, arguments);
+                $("systemview #" + id).remove();
+            });
+
+            socket.on('err', function(err) {
+                $("systemview viewers").html(err);
+            });
+
+            socket.emit("subscribe", "", info);
         });
-
-        socket.on('leave', function (id) {
-            console.log("leave", arguments);
-            $("#" + id).remove();
-        });
-
-        socket.on('err', function (err) {
-            $("viewers").html(err);
-        });
-
-        socket.emit("subscribe", resource, info);
-    });
+    }());
 </script>

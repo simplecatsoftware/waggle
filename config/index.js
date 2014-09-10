@@ -13,8 +13,17 @@ function getServiceConfigs () {
     return services;
 }
 
+function getProcessPort () {
+    var argv = process.argv;
+    var port = argv.indexOf("--port");
+
+    if ( port === -1 ) return 3050;
+
+    return argv[port + 1];
+}
+
 module.exports = {
-    http_port           : 3050,
+    http_port           : getProcessPort(),
     http_host           : "localhost",
     redis_port          : 6379,
     redis_host          : "localhost",

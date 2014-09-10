@@ -16,7 +16,6 @@ function ttypids() {
 }
 
 function kick() {
-	MESSAGE="User kicked"
 	case $# in
 		# if only one argument is specified, kick out the user
 		1)
@@ -55,6 +54,12 @@ nodenv rehash
 cd /vagrant
 nodenv exec npm install -g pm2
 
+pm2 start main.js --name=waggle --node-args="--harmony" --watch
+
 sed -i '$ d' ~/.bashrc
+
+echo "cd /vagrant" >> ~/.bashrc
+
+echo "*** You are all set to go now, just start editing and you will be able to check your build at http://localhost:8080 ***";
 
 kick vagrant

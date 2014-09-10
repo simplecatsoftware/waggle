@@ -1,5 +1,11 @@
-# Waggle
+# ![Waggle Dance](http://www.cheshire-bka.co.uk/Images/bee_dance_waggle.gif) Waggle
 A realtime intra application communication network.
+
+## Abstract
+
+Waggle allows applications to communicate using the socket.io client (version >1.0), services are configured using json files placed in the ```config/services``` directory.
+
+Services are top level with resources and resource ids under them. DMS for instance, has a requirement for realtime notification of each user viewing a document.
 
 ## Developing
 
@@ -9,7 +15,6 @@ Working with waggle is relatively easy, there is a vagrant set up in the root of
 ```bash
 vagrant up; vagrant ssh; clear; vagrant ssh;
 ```
-
 
 ## Installation
 
@@ -56,7 +61,7 @@ nodenv rehash
 ```bash
 nodenv exec npm install -g pm2 # This may need to be run as root (sudo)
 ```
-pm2 start main.js --name=waggle --node-args="--harmony"
+
 #### Install redis
 ```bash
 sudo apt-get install redis-server
@@ -64,6 +69,10 @@ sudo apt-get install redis-server
 
 Ensure redis is running with ```sudo service redis-server status``` and if not then run ```sudo service redis-server start```
 
+##### Start the application
+```bash
+pm2 start main.js --name=waggle --node-args="--harmony" --watch
+```
 
 ### Configuration
 

@@ -1,132 +1,188 @@
-var environment = process.env['NODE_ENV'] || 'development';
-var config      = require('./config');
-var httpHandler = require('./lib/httpHandler');
-var http        = require('http').createServer( httpHandler );
-var log         = require('./lib/log')( environment, "waggle.log" );
-
+var config = require('./config');
+var co = require('co');
+var thunkify = require('thunkify');
+var redisClient = require('redis').createClient();
+var redisCo = require('co-redis');
+var redis = redisCo(redisClient);
+var http = require('http').createServer(function(req, res) {
+    fs.readFile('./public/index.html', 'utf8', function(err, data) {
+        res.end(data);
+    });
+}).listen(config.http_port, function() {
+    console.log("[HTTP] Started on port " + config.http_port);
+});
 var io = require('socket.io')(http);
 var io_redis = require('socket.io-redis');
-var redis = require('redis').createClient();
+var eventEmitter = require('eventemitter2').EventEmitter;
+var fs = require('fs');
 var _ = require('underscore');
 
+io.adapter(io_redis({
+    host: config.redis_host,
+    port: config.redis_port,
+    key: config.redis_key
+}));
 
-// redis.flushdb();
 
-// io.adapter(io_redis({ host: config.redis_host, port: config.redis_port, key: config.redis_key }));
+/**
+ * A real time communication and message sending service
+ * @class
+ */
+var Waggle = function() {
 
-config.services.forEach( function ( service ) {
-    service.resources.forEach( function ( resource ) {
-        io.of( "/" + service.name + resource.namespace )
-          .on( "connection", onSocketConnection )
-          .configuration = resource;
-    });
+    // Set up the namespaces for each configured service
+    config.services.forEach(function(service) {
+        service.resources.forEach(function(resource) {
+            io.of("/" + service.name + resource.namespace)
+                .on("connection", this.onSocketConnect.bind(this))
+                .configuration = resource;
+        }, this);
+    }, this);
+};
+
+/**
+ * Event handler for any errors
+ * @event
+ * @param {string|error} err - The error that triggered the event
+ */
+Waggle.prototype.onError = function(err) {
+
+};
+
+/**
+ * Event handler for Socket.io connection
+ * @event
+ * @param {object} socket - The Socket.io instance
+ */
+Waggle.prototype.onSocketConnect = co(function * (socket) {
+    socket.emit('defaults', _.pick( socket.nsp.configuration, "required", "unique" ) );
+
+    socket.on('disconnect', this.onSocketDisconnect.bind(this, socket));
+    socket.on('subscribe', this.onSocketSubscribe.bind(this, socket));
 });
 
-http.listen( config.http_port, function () {
-    log("HTTP server started on port " + config.http_port, "debug" )
+/**
+ * Event handler for Socket.io disconnection
+ * @event
+ * @param {object} socket - The Socket.io instance
+ */
+Waggle.prototype.onSocketDisconnect = co(function * (socket) {
+    var service_config = socket.nsp.configuration;
+    var namespace = socket.nsp.name;
+
+    var unique = yield redis.get("socket:" + socket.id);
+
+    redisClient.del("socket:" + socket.id);
+
+    yield redis.srem("resource:" + unique, socket.id);
+
+    var sockets = yield redis.smembers("resource:" + unique);
+
+    if (sockets.length === 0) {
+        var info = yield redis.hgetall("info:" + unique);
+        socket.broadcast.emit("leave", socket.unique);
+        redisClient.del("info:" + unique);
+    }
 });
 
-function onSocketConnection ( socket ) {
-    var nsp_config = socket.nsp.configuration;
+/**
+ * Event handler for Socket.io channel subscribe
+ * @event
+ * @param {object} socket - The Socket.io instance
+ */
+Waggle.prototype.onSocketSubscribe = co(function * (socket, room, info) {
+    var service_config = socket.nsp.configuration;
+    var namespace = socket.nsp.name;
     var scope = this;
 
-    this.onSocketDisconnection = function () {
-        redis.get( "socket:" + socket.id, function ( err, nsp_res ) {
-            // if (err || nsp_res === null) { return; }
-            nsp_arr = nsp_res.split("#");
-            log( nsp_arr[1] + ":" + socket.id + " unsubscribed from " + nsp_arr[0], "debug" )
-            redis.smembers( nsp_res, function ( err, sockets ) {
-                if (err) { return; }
-                console.log(sockets);
-                redis.srem( nsp_res, socket.id );
-                if (sockets.length === 1) {
-                    redis.del( nsp_res );
-                    redis.del( "/info" + nsp_res );
-                    socket.broadcast.emit("leave", nsp_arr[1]);
-                }
-            });
-        });
+    // Check that the required information is provided
+    if (!this.arrayContains(service_config.required, _.keys(info))) {
+        socket.emit("err", "Failed to connect: required fields not supplied");
+        return;
     };
 
-    this.onSocketSubscribe = function ( room, info ) {
-        var valid_info;
+    // Create the clients resource info if needed
+    var client_resource = socket.nsp.name + ":" + room + "#" + info[service_config.unique];
+    var stored_info = yield redis.hgetall("info:" + client_resource);
 
-        // _.each( nsp_config.required, function ( required ) {
-        //     if ( !_.has( info, required ) ) {
-        //         valid_info = false;
-        //     }
-        // });
-        //
-        // if (!valid_info) {
-        //     socket.emit("err", { msg: "Unable to join room, please provide all required keys." });
-        //     return;
-        // }
+    if (!stored_info) stored_info = info;
 
-        var client_resource = socket.nsp.name + ":" + room + "#" + info[nsp_config.unique];
+    if ( service_config.add_keys ) {
+        _.each( service_config.add_keys, function ( key ) {
+            key = key.substr(1);
 
-        redis.hgetall( client_resource + "/info", function ( err, value ) {
-            if (value) {
-                info = value;
+            if (
+                _.isFunction( scope[key] ) &&
+                !stored_info[key]
+            ) {
+                stored_info[key] = scope[key]();
+            }
+        });
+    }
+
+    // Set the client information hash
+    yield redis.hmset("info:" + client_resource, stored_info);
+
+    // Create an entry for the socket id referenced to the client
+    yield redis.set("socket:" + socket.id, client_resource);
+
+    // Create an entry for the client with it's asociated sockets
+    yield redis.sadd("resource:" + client_resource, socket.id);
+
+    // Join the room
+    socket.join(room);
+
+    // Set the unique on the socket object
+    socket.unique = info[service_config.unique];
+
+    var uniques_in_room = yield redis.keys("resource:" + socket.nsp.name + ":" + room + "*");
+
+    _.each(uniques_in_room, co(function * (unique) {
+        // If the unique in question is this client then exit this iteration
+        if (unique.indexOf(info[service_config.unique]) !== -1) return;
+
+        var data = yield redis.hgetall(unique.replace("resource:", "info:"));
+
+        socket.emit("join", data);
+
+        var sockets = yield redis.smembers(unique);
+
+        _.each(sockets, function(sid) {
+            // If the socket doesn't exist then delete it
+            if (!socket.nsp.connected[sid]) {
+                // Do not yield as we don't care if these operations have any problems
+                redisClient.srem(unique, sid);
+                redisClient.del("socket:" + sid);
                 return;
             }
-            if ( nsp_config.add_keys ) {
-                _.each( nsp_config.add_keys, function ( key ) {
-                    key = key.substr(1);
 
-                    if ( _.isFunction( scope[key] ) ) {
-                        info[key] = scope[key]();
-                    }
-                });
-            }
-            _.each( info, function ( value, key ) {
-                redis.hset( "/info" + client_resource, key, value );
-            });
+            // Broadcast to the sockets
+            socket.nsp.connected[sid].emit("join", stored_info);
         });
-
-        redis.sadd( client_resource, socket.id );
-        redis.set( "socket:" + socket.id, client_resource );
-
-        socket.join( room );
-
-        redis.keys( socket.nsp.name + ":" + room + "*", function ( err, keys ) {
-
-            _.each( keys, function (key) {
-                if ( key.indexOf(info[nsp_config.unique]) !== -1 ) {
-                    return;
-                }
-
-                redis.smembers( key, function ( err, members ) {
-                    _.each( members, function ( member ) {
-                        _.each( socket.nsp.sockets, function (sock) {
-                            if (sock.id === member) {
-                                sock.emit("join", info);
-                            }
-                        });
-                    });
-                    console.log("smembers", arguments);
-                });
-            });
-        });
-
-        redis.keys( "/info" + socket.nsp.name + ":" + room + "*", function ( err, uniques ) {
-            _.each( uniques, function ( unique ) {
-                if ( unique.indexOf(info[nsp_config.unique]) !== -1 ) {
-                    return;
-                }
-
-                redis.hgetall( unique, function ( err, data ) {
-                    socket.emit("join", data);
-                });
-            });
-        });
-
-        log( info.username + ":" + socket.id + " subscribed   to   " + socket.nsp.name + ":" + room, "debug" );
-    };
+    }));
 
     this.timestamp = function () {
         return socket.handshake.issued;
     };
 
-    socket.on( "disconnect", this.onSocketDisconnection.bind(this) );
-    socket.on( "subscribe", this.onSocketSubscribe.bind(this) );
+});
+
+/**
+ * Check if the values in arr_2 exist in arr_1
+ * @param {array} arr_1 - The source array
+ * @param {array} arr_2 - The array you are testing
+ * @return {bool}
+ */
+Waggle.prototype.arrayContains = function(arr_1, arr_2) {
+    var isSame = true;
+
+    _.each(arr_1, function(val) {
+        if (arr_2.indexOf(val) === -1) {
+            isSame = false;
+        }
+    });
+
+    return isSame;
 }
+
+new Waggle();
