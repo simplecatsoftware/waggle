@@ -17,7 +17,7 @@ function getProcessPort () {
     var argv = process.argv;
     var port = argv.indexOf("--port");
 
-    if ( port === -1 ) return 3050;
+    if ( port === -1 ) return 8080;
 
     return argv[port + 1];
 }
@@ -28,5 +28,6 @@ module.exports = {
     redis_port          : 6379,
     redis_host          : "localhost",
     socketio_redis_key  : "waggle",
-    services            : getServiceConfigs()
+    services            : getServiceConfigs(),
+    logfile             : "waggle.log"
 };
