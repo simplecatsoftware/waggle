@@ -6,3 +6,10 @@ node_modules
 
 # Vagrant files
 .vagrant
+
+# OS Specifics
+.DS_Store
+Thumbs.db
+
+# Test Documentation
+out
