@@ -22,22 +22,22 @@ module.exports = function(grunt) {
                     require: true,
                     module: true,
                     console: true,
-                    process: true
+                    process: true,
+                    __dirname: true
                 }
             },
             gruntfile: {
                 src: 'Gruntfile.js'
             },
             lib_test: {
-                src: ['lib/**/*.js', 'test/**/*.js']
+                src: ['lib/**/*.js', 'test/**/*.js', 'main.js']
             }
         },
         jsdoc: {
             dist : {
-                src: ['lib/*.js', 'main.js'],
+                src: ['lib/*.js', './main.js', './README.md'],
                 options: {
-                    destination: 'doc',
-                    lenient: true
+                    destination: 'doc'
                 }
             }
         }
@@ -47,7 +47,7 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-contrib-jshint');
     grunt.loadNpmTasks('grunt-jsdoc');
 
-    // Default task.
-    grunt.registerTask('default', ['jshint', 'jsdoc']);
+    grunt.registerTask('default', ['jshint']);
+    grunt.registerTask('docs', ['jsdoc']);
 
 };
