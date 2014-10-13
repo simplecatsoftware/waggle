@@ -55,7 +55,7 @@ echo 'eval "$(nodenv init -)"' >> ~/.bashrc
 
 type nodenv # This should return #=> "nodenv is a function"
 
-nodenv install 0.11.13
+nodenv install 0.11.10
 nodenv rehash
 ```
 
