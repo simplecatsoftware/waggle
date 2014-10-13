@@ -48,13 +48,16 @@ function kick() {
 	esac
 }
 
-nodenv install 0.11.13
+nodenv install 0.11.10
 nodenv rehash
 
 cd /vagrant
 nodenv exec npm install -g pm2
 
 pm2 start main.js --name=waggle --node-args="--harmony" --watch
+
+sudo pm2 startup ubuntu
+sudo pm2 save
 
 sed -i '$ d' ~/.bashrc
 
