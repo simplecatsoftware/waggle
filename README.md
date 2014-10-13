@@ -1,4 +1,6 @@
-# ![Waggle Dance](http://www.cheshire-bka.co.uk/Images/bee_dance_waggle.gif) Waggle
+<span style="float: right">![Waggle Dance](http://www.cheshire-bka.co.uk/Images/bee_dance_waggle.gif)</span>
+# Waggle
+
 A realtime intra application communication network.
 
 ## Abstract
@@ -22,7 +24,7 @@ vagrant up; vagrant ssh; clear; vagrant ssh;
 
 Running the application in a production environment requires the following managing applications
 
-* node >0.11.13
+* node =0.11.10 (Will not work on newer or older versions)
 * git
 * redis-server
 * [nodenv](https://github.com/OiNutter/nodenv)
