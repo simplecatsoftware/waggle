@@ -13,3 +13,7 @@ Thumbs.db
 
 # Test Documentation
 out
+
+# DB dumps
+*.sql
+*.rdb
