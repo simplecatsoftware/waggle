@@ -1,5 +1,8 @@
-# node
+# vendor files
 node_modules
+vendor
+bower_components
+
 
 # logs
 *.log
