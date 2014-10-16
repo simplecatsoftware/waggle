@@ -20,8 +20,8 @@ var WaggleClient = function ( namespace, resource, url ) {
     this.socket.on( "anything", this.trigger.bind(this) );
     this.socket.on( "error", this.trigger.bind(this) );
 
-    this.on( "connect", function () { this.connected = true }, this );
-    this.on( "disconnect", function () { this.connected = false }, this );
+    this.on( "connect", function () { this.connected = true; }, this );
+    this.on( "disconnect", function () { this.connected = false; }, this );
 };
 
 /**
