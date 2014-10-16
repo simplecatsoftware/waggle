@@ -3,6 +3,11 @@ module.exports = function(grunt) {
 
     // Project configuration.
     grunt.initConfig({
+        jshint: {
+            application: {
+                src: ['src/**.js']
+            }
+        },
         jsdoc: {
             dist : {
                 src: ['lib/*.js', './main.js', './README.md'],
