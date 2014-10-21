@@ -10,15 +10,22 @@ module.exports = function(grunt) {
         },
         jsdoc: {
             dist : {
-                src: ['lib/*.js', './main.js', './README.md'],
+                src: ['src/*.js', './README.md'],
                 options: {
                     destination: 'docs'
                 }
+            }
+        },
+        watch: {
+            src: {
+                files: ['src/**.js'],
+                tasks: ['jshint', 'jsdoc']
             }
         }
     });
 
     // These plugins provide necessary tasks.
+    grunt.loadNpmTasks('grunt-contrib-watch');
     grunt.loadNpmTasks('grunt-contrib-jshint');
     grunt.loadNpmTasks('grunt-jsdoc');
 
