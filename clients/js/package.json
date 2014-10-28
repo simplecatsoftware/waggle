@@ -1,0 +1,26 @@
+{
+  "name": "WaggleClientJS",
+  "version": "0.0.1",
+  "description": "A client for the realtime communications server waggle.",
+  "author": "Symphony IT",
+  "private": true,
+  "os": [
+    "darwin",
+    "linux",
+    "!win32"
+  ],
+  "scripts": {
+    "test": "grunt test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@g.it.symphony.local:2222/sym/broadcast.git"
+  },
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-cli": "^0.1.13",
+    "grunt-contrib-jshint": "^0.10.0",
+    "grunt-jsdoc": "~0.6.1",
+    "grunt-contrib-watch": "~0.6.1"
+  }
+}

@@ -1,0 +1,83 @@
+<!docptype html>
+<html>
+
+<head>
+    <title>Waggle Client: js</title>
+    <style>
+        body {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+        .connected {
+            width: 40px;
+            height: 40px;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+        }
+        .logger {
+            width: 100%;
+            height: 100%;
+            padding-top: 1px;
+            background: #f0f0f0;
+            overflow: auto;
+        }
+        .logger p {
+            margin-left: 10px;
+            border-bottom: thin black;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="connected"></div>
+    <div class="logger"></div>
+
+    <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdn.socket.io/socket.io-1.1.0.js"></script>
+    <script src="../src/WaggleClient.js"></script>
+    <script>
+        var users = [{
+            fullname: "Lawrence Goldstien",
+            username: "lgold",
+            extension: "6614"
+        }, {
+            fullname: "Paul Osborne",
+            username: "posbo",
+            extension: "6616"
+        }, {
+            fullname: "Phil Bennett",
+            username: "pbenn",
+            extension: "6610"
+        }];
+
+        var waggleUser = users[Math.floor(Math.random() * 3)];
+
+        window.debug = true;
+        var waggle = new WaggleClient(
+            "/dms/document/view",
+            "3004",
+            waggleUser,
+            "http://localhost:8080"
+        );
+
+        waggle.on("connect", function() {
+            $(".connected").css("background-color", "green");
+        }).on("disconnect", function() {
+            $(".connected").css("background-color", "red");
+        }).on("join", function(data) {
+            var info = data[0];
+            $(".logger").append("<p>Subscribed: " + JSON.stringify(info) + "</p>");
+        }).on("leave", function(data) {
+            var unique = data[0];
+            $(".logger").append("<p>Left: " + JSON.stringify(unique) + "</p>");
+        });
+
+    </script>
+</body>
+
+</html>

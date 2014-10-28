@@ -1,0 +1,6 @@
+{
+  "name": "WaggleClientJS",
+  "dependencies": {
+    "socket.io-client": "~1.1.0"
+  }
+}

@@ -29,7 +29,7 @@ module.exports = function(grunt) {
             gruntfile: {
                 src: 'Gruntfile.js'
             },
-            lib_test: {
+            application: {
                 src: ['lib/**/*.js', 'test/**/*.js', 'main.js']
             }
         },
@@ -47,7 +47,14 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-contrib-jshint');
     grunt.loadNpmTasks('grunt-jsdoc');
 
+    // Register Default Task
     grunt.registerTask('default', ['jshint']);
+
+    // Register Build tasks
+    grunt.registerTask('build', ['build:clients']);
+    grunt.registerTask('build:clients', ['build:clients:js']);
+
+    // Build documentation
     grunt.registerTask('docs', ['jsdoc']);
 
 };
